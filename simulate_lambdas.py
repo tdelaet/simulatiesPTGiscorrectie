@@ -21,11 +21,10 @@ import os
 plt.close('all')
 
 # probability that misconception: i.e. that correct answer is not among the ones doubting on
-prob_misConception = 0.1
+prob_misConception = 0.11
 
 #probability that doubt between 0,1,2,3 answers
-prob_numAlternativesDoubt = [0.2,0.45,0.3,0.05]
-
+prob_numAlternativesDoubt = [0.66,0.11,0.04,0.19]
 
     
 
