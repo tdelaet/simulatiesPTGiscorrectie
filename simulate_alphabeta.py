@@ -15,20 +15,25 @@ import random
 from numpy.random import random_sample
 from math import log
 import matplotlib.cm as cm
+import os
 
 
 plt.close('all')
 
 # probability that misconception: i.e. that correct answer is not among the ones doubting on
-prob_misConception = 0.2   
+prob_misConception = 0.0
 
 #probability that doubt between 0,1,2,3 answers
-prob_numAlternativesDoubt = [0.0,0.6,0.35,0.05]
+prob_numAlternativesDoubt = [0.4,0.3,0.2,0.1]
 
-alpha = 0.88
-beta = 0.88
 
-lambda_vector = np.arange(1,10,1)
+    
+
+step = 0.05
+alpha_vector = np.arange(step,1+step,step)
+alpha = alpha_vector[0]
+beta = alpha
+lambda_v = 2.25
 
 
 
@@ -67,6 +72,13 @@ scoreCorrectAnswer_ET = 1.0/(numberAlternatives-1* scoreScale)
 
 scoreWrongAnswer_SST = -1.0/(numberAlternatives-1)* scoreScale
 scoreCorrectAnswer_SST = 1* scoreScale
+
+
+namedir = str(prob_numAlternativesDoubt )
+
+if not os.path.exists(namedir):
+    os.makedirs(namedir)
+    
 
 def sample_discrete(values, probabilities, size):
     bins = np.add.accumulate(probabilities)
@@ -202,69 +214,92 @@ possibleAnswers_ET = cartesianList([[0,1],[0,1],[0,1],[0,1]])
 possibleAnswers_SST = possibleAnswers_ET
     
 
+
+
+## Create differente exam answers with the given parameters for the exam    
+
+# for each question sample between how many alternatives there is doubt
+numAlternativesDoubt = sample_discrete(np.array([1,2,3,4]), prob_numAlternativesDoubt,numSamples)
+
+# if doubt between more than one value generate random numbers for probabilities
+probAlternativesSamples = []
+for sample in np.arange(numSamples):
+    remainingProb =1 
+    counterAlternativesToSample = numAlternativesDoubt[sample]
+    counterAlternative = 0
+    probAlternativeSample = np.zeros(numberAlternatives)
+    #as long as there is doubt between more than one alternative
+    while ( counterAlternativesToSample>1 ):
+        #sample a probability for the next alternative from between 0.01 and remainingProbability
+        values_prob= np.arange(0.001,remainingProb,0.01)
+        alternativeProb = sample_discrete(values_prob,np.ones(len(values_prob))/len(values_prob),1) 
+        probAlternativeSample[counterAlternative] = alternativeProb        
+        #subtract the probability of the alternative from the remaining probability
+        remainingProb-=alternativeProb
+        # there is one alternative less left to sample
+        counterAlternativesToSample-=1
+        # we have found the probability for one alternative more
+        counterAlternative+=1
+    # there is only one alternative left to doubt on: this one should get the remaining probability    
+    probAlternativeSample[counterAlternative] = remainingProb
+    #shuffle the result such that there is equal doubt between different alternatives
+    random.shuffle(probAlternativeSample)
+    #append to list of probabilities    
+    probAlternativesSamples.append(np.asarray(probAlternativeSample))
+
+
+# simulation where there is no misconception => correct answer is within the ones doubted on
+correctAnswers = []
+for sample in np.arange(numSamples):
+    indicesAlternativesInDoubt = np.where(probAlternativesSamples[sample]!=0)[0]
+    correctAnswer = sample_discrete(indicesAlternativesInDoubt,np.ones(len(indicesAlternativesInDoubt))/len(indicesAlternativesInDoubt),1)[0]
+    correctAnswers.append(correctAnswer)
+    
+# simulation where there is a probability for misconception => correct answer is not necessarily within the ones doubted on
+correctAnswers = []
+for sample in np.arange(numSamples):
+    indicesAlternativesInDoubt = np.where(probAlternativesSamples[sample]!=0)[0]
+    indicesAlternativesNotInDoubt = np.where(probAlternativesSamples[sample]==0)[0]
+    # misconception=0 is no misconception
+    # misconception=1 is misconception
+    if len(indicesAlternativesNotInDoubt) == 0: # all is in doubt so misconception is impossible
+        misconception = 0
+    else:
+        misconception = sample_discrete([0,1],[1-prob_misConception,prob_misConception],1)    
+    if misconception: # if there is misconception pick a answer not in doubt as correct anwer
+        correctAnswer = sample_discrete(indicesAlternativesNotInDoubt,np.ones(len(indicesAlternativesNotInDoubt))/len(indicesAlternativesNotInDoubt),1)[0]
+    else: # if there is no misconception pick a answer still in doubt as correct anwer
+        correctAnswer = sample_discrete(indicesAlternativesInDoubt,np.ones(len(indicesAlternativesInDoubt))/len(indicesAlternativesInDoubt),1)[0]
+    correctAnswers.append(correctAnswer)
+
+
+## determine the answers for the exams with different parameters for the user (risk )
 for method in methods:
     globals()['average_' + method + "_exams_lambdas"] = []
     globals()['std_' + method + "_exams_lambdas"] = []
- 
 
+
+## FOR METHODS WITH NO CHOICE RESULT DOES NOT DEPEND ON PARAMETERS OF RISK BEHAVIOUR
+for method in methodsNoChoice:
+        globals()['scores_' + method] = []
         
-for lambda_v in lambda_vector:
-    # for each question sample between how many alternatives there is doubt
-    numAlternativesDoubt = sample_discrete(np.array([1,2,3,4]), prob_numAlternativesDoubt,numSamples)
-    
-    # if doubt between more than one value generate random numbers for probabilities
-    probAlternativesSamples = []
-    for sample in np.arange(numSamples):
-        remainingProb =1 
-        counterAlternativesToSample = numAlternativesDoubt[sample]
-        counterAlternative = 0
-        probAlternativeSample = np.zeros(numberAlternatives)
-        #as long as there is doubt between more than one alternative
-        while ( counterAlternativesToSample>1 ):
-            #sample a probability for the next alternative from between 0.01 and remainingProbability
-            values_prob= np.arange(0.001,remainingProb,0.01)
-            alternativeProb = sample_discrete(values_prob,np.ones(len(values_prob))/len(values_prob),1) 
-            probAlternativeSample[counterAlternative] = alternativeProb        
-            #subtract the probability of the alternative from the remaining probability
-            remainingProb-=alternativeProb
-            # there is one alternative less left to sample
-            counterAlternativesToSample-=1
-            # we have found the probability for one alternative more
-            counterAlternative+=1
-        # there is only one alternative left to doubt on: this one should get the remaining probability    
-        probAlternativeSample[counterAlternative] = remainingProb
-        #shuffle the result such that there is equal doubt between different alternatives
-        random.shuffle(probAlternativeSample)
-        #append to list of probabilities    
-        probAlternativesSamples.append(np.asarray(probAlternativeSample))
-    
-    
-    # simulation where there is no misconception => correct answer is within the ones doubted on
-    correctAnswers = []
-    for sample in np.arange(numSamples):
-        indicesAlternativesInDoubt = np.where(probAlternativesSamples[sample]!=0)[0]
-        correctAnswer = sample_discrete(indicesAlternativesInDoubt,np.ones(len(indicesAlternativesInDoubt))/len(indicesAlternativesInDoubt),1)[0]
-        correctAnswers.append(correctAnswer)
+for sample in np.arange(numSamples):     
+    for method in methodsNoChoice:
+        globals()['scores_' + method].append(globals()['score_' + method](probAlternativesSamples[sample],correctAnswers[sample]))
         
-    # simulation where there is a probability for misconception => correct answer is not necessarily within the ones doubted on
-    correctAnswers = []
-    for sample in np.arange(numSamples):
-        indicesAlternativesInDoubt = np.where(probAlternativesSamples[sample]!=0)[0]
-        indicesAlternativesNotInDoubt = np.where(probAlternativesSamples[sample]==0)[0]
-        # misconception=0 is no misconception
-        # misconception=1 is misconception
-        if len(indicesAlternativesNotInDoubt) == 0: # all is in doubt so misconception is impossible
-            misconception = 0
-        else:
-            misconception = sample_discrete([0,1],[1-prob_misConception,prob_misConception],1)    
-        if misconception: # if there is misconception pick a answer not in doubt as correct anwer
-            correctAnswer = sample_discrete(indicesAlternativesNotInDoubt,np.ones(len(indicesAlternativesNotInDoubt))/len(indicesAlternativesNotInDoubt),1)[0]
-        else: # if there is no misconception pick a answer still in doubt as correct anwer
-            correctAnswer = sample_discrete(indicesAlternativesInDoubt,np.ones(len(indicesAlternativesInDoubt))/len(indicesAlternativesInDoubt),1)[0]
-        correctAnswers.append(correctAnswer)
+for method in methodsNoChoice:     
+    globals()['totalScore_' + method] = sum( globals()['scores_' + method])/numSamples * 100/scoreScale
+    globals()['scores_' + method + '_exams'] =   zip(*[iter(globals()['scores_' + method])]*numQuestions)
+    globals()['totalScore_' + method + '_exams'] = sum(globals()['scores_' + method + '_exams'],axis=1)/numQuestions * 100   /scoreScale 
+    globals()['average_' + method + '_exams'] = np.average(globals()['totalScore_' + method + '_exams'])
+    globals()['std_' + method + '_exams'] = np.std(globals()['totalScore_' + method + '_exams'])        
+   
+## FOR METHODS WITH CHOICE RESULT DEPENDS ON PARAMETERS OF RISK BEHAVIOUR
+for alpha in alpha_vector:
+    beta = alpha
         
     # determine answers using particular answering strategy (maxvalue answer according to behavioural theory (prospect theory))
-    for method in methods:
+    for method in methodsChoice:
         globals()['scores_' + method] = []
         
     for sample in np.arange(numSamples):     
@@ -279,11 +314,7 @@ for lambda_v in lambda_vector:
             # step 4: calculate the score for this 
             globals()['scores_' + method].append(globals()['score_' + method](globals()['possibleAnswers_' + method][globals()['maxAnswer_' + method]],correctAnswers[sample]))
         
-        for method in methodsNoChoice:
-            # step 4: calculate the score for this 
-            globals()['scores_' + method].append(globals()['score_' + method](probAlternativesSamples[sample],correctAnswers[sample]))
-    
-    for method in methods:
+    for method in methodsChoice:
         globals()['totalScore_' + method] = sum( globals()['scores_' + method])/numSamples * 100/scoreScale
         globals()['scores_' + method + '_exams'] =   zip(*[iter(globals()['scores_' + method])]*numQuestions)
         globals()['totalScore_' + method + '_exams'] = sum(globals()['scores_' + method + '_exams'],axis=1)/numQuestions * 100   /scoreScale 
@@ -298,14 +329,13 @@ for lambda_v in lambda_vector:
     labels = methods
     ax.set_xticklabels(labels)
     plt.ylim([0,100])
-    plt.savefig('totalScoreDifferentMethods_lambda'+str(lambda_v)+'_pmis'+str(prob_misConception)+'.png')
+    plt.savefig(namedir+'/totalScoreDifferentMethods_alpha'+str(alpha)+'_pmis'+str(prob_misConception)+'.png')
     
     for method in methods:
          globals()['average_' + method + '_exams_lambdas'].append(globals()['average_' + method + '_exams'])   
          globals()['std_' + method + '_exams_lambdas'].append(globals()['std_' + method + '_exams'])   
 
 
-
 legend1=[]
 legend2=[]
 counter = 0
@@ -314,8 +344,8 @@ colors = np.arange(0,1,1.0/len(methods))+1.0/len(methods)
 for method in methods:
     average_array = np.asarray(globals()['average_' + method + '_exams_lambdas'])
     std_array = np.asarray(globals()['std_' + method + '_exams_lambdas'])
-    line = plt.plot(lambda_vector,average_array)
-    plt.setp(line, color=cm.jet(counter/(len(methods)-1)), linewidth=2.0, linestyle = '-')
+    line = plt.plot(alpha_vector,average_array)
+    plt.setp(line, color=cm.jet(counter/(len(methods)-1)), linewidth=2.0, linestyle = '-',marker="*",markerfacecolor=cm.jet(counter/(len(methods)-1)),markeredgecolor=cm.jet(counter/(len(methods)-1)))
     #lines = plt.plot(lambda_vector,average_array-std_array,lambda_vector,average_array+std_array)
     #plt.setp(lines, color=cm.jet(counter/(len(methods)-1)), linewidth=2.0, linestyle = '--')
     legend1.append(plt.Circle((0, 0), 1, fc=cm.jet(counter/(len(methods)-1))))
@@ -324,11 +354,11 @@ ax.legend(legend1, labels)
 plt.ylim([0,100])
 start, end = ax.get_ylim()
 ax.yaxis.set_ticks(np.arange(start, end, 5))
-plt.xlabel("lambda")
+plt.xlabel("alpha=beta")
 plt.ylabel("total score exam")
 plt.grid(1)
 plt.show()    
-plt.savefig('totalScoreDifferentMethods_lambdas'+'_pmis'+str(prob_misConception)+'.png')
+plt.savefig(namedir+'/totalScoreDifferentMethods_alphas'+'_pmis'+str(prob_misConception)+'.png')
 
 
 legend1=[]
@@ -339,7 +369,7 @@ colors = np.arange(0,1,1.0/len(methods))+1.0/len(methods)
 for method in methods:
     average_array = np.asarray(globals()['average_' + method + '_exams_lambdas'])
     std_array = np.asarray(globals()['std_' + method + '_exams_lambdas'])
-    line = plt.plot(lambda_vector,std_array)
+    line = plt.plot(alpha_vector,std_array)
     plt.setp(line, color=cm.jet(counter/(len(methods)-1)), linewidth=2.0, linestyle = '-')
     #lines = plt.plot(lambda_vector,average_array-std_array,lambda_vector,average_array+std_array)
     #plt.setp(lines, color=cm.jet(counter/(len(methods)-1)), linewidth=2.0, linestyle = '--')
@@ -349,8 +379,8 @@ ax.legend(legend1, labels)
 plt.ylim([0,100])
 start, end = ax.get_ylim()
 ax.yaxis.set_ticks(np.arange(start, end, 5))
-plt.xlabel("lambda")
+plt.xlabel("alpha=beta")
 plt.ylabel("standard deviation total score exam")
 plt.grid(1)
 plt.show()    
-plt.savefig('stdTotalScoreDifferentMethods_lambdas'+'_pmis'+str(prob_misConception)+'.png')
+plt.savefig(namedir+'/stdTotalScoreDifferentMethods_alphas'+'_pmis'+str(prob_misConception)+'.png')
