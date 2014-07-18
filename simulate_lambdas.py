@@ -21,18 +21,20 @@ import os
 plt.close('all')
 
 # probability that misconception: i.e. that correct answer is not among the ones doubting on
-prob_misConception = 0.0
+prob_misConception = 0.1
 
 #probability that doubt between 0,1,2,3 answers
-prob_numAlternativesDoubt = [0.4,0.3,0.2,0.1]
+prob_numAlternativesDoubt = [0.2,0.45,0.3,0.05]
 
 
     
 
 step = 0.05
-alpha_vector = np.arange(step,1+step,step)
-alpha = alpha_vector[0]
+alpha = 0.88
 beta = alpha
+
+lambda_vector = np.arange(1,10,0.5)
+
 lambda_v = 2.25
 
 
@@ -275,8 +277,8 @@ for sample in np.arange(numSamples):
 
 ## determine the answers for the exams with different parameters for the user (risk )
 for method in methods:
-    globals()['average_' + method + "_exams_alphas"] = []
-    globals()['std_' + method + "_exams_alphas"] = []
+    globals()['average_' + method + "_exams_lambdas"] = []
+    globals()['std_' + method + "_exams_lambdas"] = []
 
 
 ## FOR METHODS WITH NO CHOICE RESULT DOES NOT DEPEND ON PARAMETERS OF RISK BEHAVIOUR
@@ -295,8 +297,7 @@ for method in methodsNoChoice:
     globals()['std_' + method + '_exams'] = np.std(globals()['totalScore_' + method + '_exams'])        
    
 ## FOR METHODS WITH CHOICE RESULT DEPENDS ON PARAMETERS OF RISK BEHAVIOUR
-for alpha in alpha_vector:
-    beta = alpha
+for lambda_v in lambda_vector:
         
     # determine answers using particular answering strategy (maxvalue answer according to behavioural theory (prospect theory))
     for method in methodsChoice:
@@ -329,11 +330,11 @@ for alpha in alpha_vector:
     labels = methods
     ax.set_xticklabels(labels)
     plt.ylim([0,100])
-    plt.savefig(namedir+'/totalScoreDifferentMethods_alpha'+str(alpha)+'_pmis'+str(prob_misConception)+'.png')
+    plt.savefig(namedir+'/totalScoreDifferentMethods_lambda'+str(lambda_v)+'_pmis'+str(prob_misConception)+'.png')
     
     for method in methods:
-         globals()['average_' + method + '_exams_alphas'].append(globals()['average_' + method + '_exams'])   
-         globals()['std_' + method + '_exams_alphas'].append(globals()['std_' + method + '_exams'])   
+         globals()['average_' + method + '_exams_lambdas'].append(globals()['average_' + method + '_exams'])   
+         globals()['std_' + method + '_exams_lambdas'].append(globals()['std_' + method + '_exams'])   
 
 
 legend1=[]
@@ -342,9 +343,9 @@ counter = 0
 fig, ax = plt.subplots()
 colors = np.arange(0,1,1.0/len(methods))+1.0/len(methods)
 for method in methods:
-    average_array = np.asarray(globals()['average_' + method + '_exams_alphas'])
-    std_array = np.asarray(globals()['std_' + method + '_exams_alphas'])
-    line = plt.plot(alpha_vector,average_array)
+    average_array = np.asarray(globals()['average_' + method + '_exams_lambdas'])
+    std_array = np.asarray(globals()['std_' + method + '_exams_lambdas'])
+    line = plt.plot(lambda_vector,average_array)
     plt.setp(line, color=cm.jet(counter/(len(methods)-1)), linewidth=2.0, linestyle = '-',marker="*",markerfacecolor=cm.jet(counter/(len(methods)-1)),markeredgecolor=cm.jet(counter/(len(methods)-1)))
     #lines = plt.plot(lambda_vector,average_array-std_array,lambda_vector,average_array+std_array)
     #plt.setp(lines, color=cm.jet(counter/(len(methods)-1)), linewidth=2.0, linestyle = '--')
@@ -354,11 +355,11 @@ ax.legend(legend1, labels)
 plt.ylim([0,100])
 start, end = ax.get_ylim()
 ax.yaxis.set_ticks(np.arange(start, end, 5))
-plt.xlabel("alpha=beta")
+plt.xlabel("lambda")
 plt.ylabel("total score exam")
 plt.grid(1)
 plt.show()    
-plt.savefig(namedir+'/totalScoreDifferentMethods_alphas'+'_pmis'+str(prob_misConception)+'.png')
+plt.savefig(namedir+'/totalScoreDifferentMethods_lambdas'+'_pmis'+str(prob_misConception)+'.png')
 
 
 legend1=[]
@@ -367,9 +368,9 @@ counter = 0
 fig, ax = plt.subplots()
 colors = np.arange(0,1,1.0/len(methods))+1.0/len(methods)
 for method in methods:
-    average_array = np.asarray(globals()['average_' + method + '_exams_alphas'])
-    std_array = np.asarray(globals()['std_' + method + '_exams_alphas'])
-    line = plt.plot(alpha_vector,std_array)
+    average_array = np.asarray(globals()['average_' + method + '_exams_lambdas'])
+    std_array = np.asarray(globals()['std_' + method + '_exams_lambdas'])
+    line = plt.plot(lambda_vector,std_array)
     plt.setp(line, color=cm.jet(counter/(len(methods)-1)), linewidth=2.0, linestyle = '-')
     #lines = plt.plot(lambda_vector,average_array-std_array,lambda_vector,average_array+std_array)
     #plt.setp(lines, color=cm.jet(counter/(len(methods)-1)), linewidth=2.0, linestyle = '--')
@@ -379,8 +380,8 @@ ax.legend(legend1, labels)
 plt.ylim([0,100])
 start, end = ax.get_ylim()
 ax.yaxis.set_ticks(np.arange(start, end, 5))
-plt.xlabel("alpha=beta")
+plt.xlabel("lambda")
 plt.ylabel("standard deviation total score exam")
 plt.grid(1)
 plt.show()    
-plt.savefig(namedir+'/stdTotalScoreDifferentMethods_alphas'+'_pmis'+str(prob_misConception)+'.png')
+plt.savefig(namedir+'/stdTotalScoreDifferentMethods_lambdas'+'_pmis'+str(prob_misConception)+'.png')

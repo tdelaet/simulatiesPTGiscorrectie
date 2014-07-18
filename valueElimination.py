@@ -112,7 +112,7 @@ def cartesianList(lists):
 
     
 # evenly sampled time at 200ms intervals
-x = np.arange(-5, 5, 0.2)
+x = np.arange(-4, 4, 0.02)
 
 # red dashes, blue squares and green triangles
 
@@ -122,6 +122,8 @@ plt.xlabel("x")
 plt.ylabel("v(x)")
 plt.show()    
 plt.grid(1)
+plt.savefig(nameMethod + '/valueFunction.png')
+
 
 
 answer = np.array([1,0,0,0]) # antwoord A is geëlimineerd
